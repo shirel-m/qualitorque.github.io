@@ -22,6 +22,31 @@ description: Performance testing deployment based on RDS, EKS and Lambda
 
 ```
 
+### Instructions
+
+Instructions are the recommended way for the blueprint developer to communicate with the end user and explain how to use this blueprint. The instructions can be simple text, or a complete MarkDown file, hosted in your git repository. 
+
+```yaml
+spec_version: 2
+description: Performance testing deployment based on RDS, EKS and Lambda
+instructions:
+  text: "This is what you need to know ... " # text option
+  source:
+    store: <The name of the repository which contains the instructions as it was onboarded to Torque>
+    path : <instructions/something.md> # path inside the repository where the instructions md file is located. Must be in a folder called "instructions".
+
+```
+
+:::info
+- Blueprint instructions can be located in the same repository as the blueprints or a different repository
+- Torque will use only markdown files located in the “/instructions” folder under the root of the onboarded repository
+- Torque will support external resources embed in the markdown under the following rules:
+  - Any link to external and publicly exposed resource
+  - Relative path to images, svg and gif files located within the /instructions folder
+- Torque will not support relative .md references -Torque will not allow to load/redirect to another markdown mentioned in the markdown provided as the blueprint instructions.
+:::
+
+
 ### Inputs
 Blueprint designers can publish blueprint inputs to their end-users to add flexibility while launching a new environment from the blueprints, without altering the blueprint code itself. Input data can be later used in the blueprint to control orchestration, pass information to automation processes, and more.
 
@@ -99,6 +124,7 @@ The following grains are available:
 * [Kubernetes](/blueprint-designer-guide/blueprints/kubernetes-grain)
 * [Shell](/blueprint-designer-guide/blueprints/shell-grain)
 * [Ansible](/blueprint-designer-guide/blueprints/ansible-grain)
+* [CloudShell](/blueprint-designer-guide/blueprints/cloudshell-grain)
 * [Blueprint](/blueprint-designer-guide/blueprints/blueprint-grain)
 
 ### Source
@@ -305,15 +331,35 @@ In the below example the [downcase](https://shopify.github.io/liquid/filters/dow
       agent:
         name: '{{ .inputs.agent_name }}'
       inputs:
-        - bucket_name: '{{ .inputs.bucket_name | strip }}-bucket-{{ sandboxid | downcase }}'
+        - bucket_name: '{{ .inputs.bucket_name | strip }}-bucket-{{ envid | downcase }}'
 ```
 
-:::info
-Blueprint designers might need extra details about the account, space or environment during the environment's orchestration. Torque provides dynamic attributes such as a sandboxid, accountid and spaceid that can be used through the orchestration and automation process.   
+### Dynamic Attributes
+Blueprint designers might need extra details about the account, space or environment during the environment's orchestration. Torque provides dynamic attributes which are pre-defined parameters blueprints designers can use. The currently supported dynamic attributes are:
+
+- envId
+- blueprintName 
+- ownerEmail
+- environmentName
+- accountName
+- spaceName
+
+Here is an example of how it can be used:
+
+```yaml 
+  s3_bucket:
+      ...
+      inputs:
+        - bucket_name: bucket-{{ envId | downcase }}'
+```
+
+:::note
+The dynamic attributes calculation is case insensitive so you can use either "envId" or "envid" etc.
 :::
 
+
 ### Parameters
-Torque's [Parameters](/admin-guide/general/params) store allows admins to set pre-defined account/space-level parameters. Blueprint designers can use the parameters in the blueprint YAML, instead of inputs if they don't want the environment end-user to provide the value, but also don't want to hard-code it in the blueprint.
+Torque's [Parameters](/admin-guide/params) store allows admins to set pre-defined account/space-level parameters. Blueprint designers can use the parameters in the blueprint YAML, instead of inputs if they don't want the environment end-user to provide the value, but also don't want to hard-code it in the blueprint.
 
 The syntax is: ```{{.params.param-value}}```
 

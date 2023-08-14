@@ -1,6 +1,6 @@
 ---
 sidebar_position: 36
-title: Self-managed Source Control
+title: Self-Managed GitLab
 ---
 
 Torque supports connecting asset/blueprint repositories residing in a self-managed GitLab repository. 
@@ -16,15 +16,16 @@ Torque supports connecting asset/blueprint repositories residing in a self-manag
 
    Post: http://portal.qtorque.io/api/settings/repository_providers
 
-  ```{
-  "name":"gitlab-1,
-  "type":"gitLabEnterprise",
-  "details": {
+  ```jsx
+  {
+    "name":"gitlab-1",
+    "type":"gitLabEnterprise",
+    "details": {
       "token":"NzcmESA2NjQ4MjUzOiCO87F2eTXL9TbHeWpeZO3p3GS9",
-      "base_url": http://private.mygitlab.org/,
-  },
-  "repos": []
-}
+      "base_url": "http://private.mygitlab.org/"
+    },
+    "repos": []
+  }
   ```
 
    * __name__: Display name of repository

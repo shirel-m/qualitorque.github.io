@@ -5,8 +5,6 @@ title: The Ansible Grain
 
 The Ansible grain is Torque’s native support for orchestrating the execution of Ansible playbooks as part of a Torque blueprint. The referenced playbook can rely on vars or inventory-hosts that are dynamically provided by Torque, and then utilize them to perform configuration management, updates, a health check or any other flow that is executable from Ansible. 
 
-Note: an Ansible grain does not provide grain outputs. 
-
 ### Tools and technologies
 
 The following tools and technologies are installed out of the box on our agents in the Kubernetes pods and can be used when writing grain scripts (pre/post, etc.):
@@ -45,6 +43,70 @@ My_Ansible_Grain:
 
 ### agent
 Please see [the grain agent](/blueprint-designer-guide/blueprints/blueprints-yaml-structure#host) for more details.
+
+### inputs
+Inputs which are provided to the ansible grain will be used in the ansible command line as "extra-vars".
+The syntax is similar to any grain inputs.
+
+Let's look at an example. In the example we have a blueprint with 2 grains: a VM and an ansible playbook to configure it.
+
+**Blueprint:**
+
+```yaml
+spec_version: 2
+   ...   
+grains:
+  my_vm:
+    kind: terraform
+    spec:
+      source:
+        store: assets
+        path:terraform/vcenter/linux_vm
+      outputs:
+      - vm_ip
+      - vm_link
+      - vm_name
+
+  configure-vm:
+    depends-on: my_vm
+    kind: ansible
+    spec:
+      source:
+        store: assets
+        path: assets/ansible/configure.yaml
+      inputs:
+        - nodes: '{{ grains.my_vm.outputs.vm_ip }}'
+        - username: '{{ .params.vc_ubuntu_user }}'
+        - password: '{{ .params.vc_ubuntu_password }}'
+```
+
+**Playbook:**
+
+```yaml
+- hosts: {{ nodes }}
+  tasks:
+  - name: configure virtual machine
+    azure_rm_virtualmachine:
+      username: "{{ username }}"
+      password: "{{ password }}"
+      …          
+```
+
+The playbook will be run with the extra vars like so:
+
+Torque wil create a .json file containing the grain inputs under the path: /var/run/ansible/inputs/inputs.json.
+
+```json
+{
+  "nodes": [...],
+  "username": ...
+  "password": ...
+}
+```
+
+```
+ansible-playbook myplaybook.yaml --extra-vars "@/var/run/ansible/inputs/inputs.json"
+```
 
 ### Inventory-file
 
@@ -121,3 +183,53 @@ __Example:__ Below is an example of a grains section of a blueprint, containing 
           vars:
             person_name: Doe
 ```
+
+### Outputs
+
+Ansible does not support outputs from playbooks natively so Torque adds this support on top of the ansible capabilities.
+Why would you need outputs from your ansible grain?
+Output from the ansible grain can be passed to another grain (ansible or not) or to become one of the blueprint outputs so can be provided to the blueprint consumer (the end user).
+
+For this purpose, we have developed the Torque ansible module "export-torque-outputs".
+
+The module accepts a dictionary of output names and values. 
+
+Usage example:
+
+**Playbook:**
+```yaml
+tasks:
+  - name: task1
+      configure_vm:
+      …
+      register: result1
+    …
+  - name: task2
+      do_something_else:
+      …
+      register: result2
+    
+
+ - name: Export outputs
+    torque.collections.export_torque_outputs:
+      outputs:
+        output1: “{{ result1 }}”
+        output2: “{{ result2 }}”
+```
+
+
+**Blueprint:**
+
+```yaml
+grains:
+   configure-vm:
+      kind: ansible
+      spec:
+       ...
+       outputs:
+          - output1
+          - output2  
+```
+
+If you wish to install the module locally to test it, please run ```ansible-galaxy collection install torque.collections```
+The module resides in the marketplace : https://galaxy.ansible.com/torque/collections

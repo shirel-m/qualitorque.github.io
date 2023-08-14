@@ -5,7 +5,7 @@ title: The Terraform Grain
 
 The Terraform grain is Torque's native support for HashiCorp Terraform modules. Torque allows designers to use Terraform-specific features to easily orchestrate self-developer and community Terraform modules in a standard way and share them with others as building blocks. For a full blueprint yaml example, see the examples in section [Create a multi-asset blueprint](/blueprint-designer-guide/blueprint-quickstart-guide#create-a-multi-asset-blueprint).
 
-Note that to deploy Terraform modules, you will need to authenticate Terraform on the Kubernetes cluster. For details, see [Terraform EKS Authentication](/admin-guide/authentication/service-accounts-for-aws), [Terraform AKS Authentication](/admin-guide/authentication/service-accounts-for-azure), or [Terraform GKE Authentication](/admin-guide/authentication/service-accounts-for-gcp).
+Note that to deploy Terraform modules, you will need to authenticate Terraform on the Kubernetes cluster. For details, see [Terraform EKS Authentication](/torque-agent/service-accounts-for-aws), [Terraform AKS Authentication](/torque-agent/service-accounts-for-azure), or [Terraform GKE Authentication](/torque-agent/service-accounts-for-gcp).
 
 ### Tools and technologies
 The following tools and technologies are installed out of the box on our agents in the Kubernetes pods and can be used when writing grain scripts (pre/post, etc.):
@@ -30,7 +30,7 @@ Please see [the grain source](/blueprint-designer-guide/blueprints/blueprints-ya
 Please see [the grain agent](/blueprint-designer-guide/blueprints/blueprints-yaml-structure#agent) for more details.
 
 ### authentication
-To enable Torque to connect to the AWS account and deploy the CloudFormation template, you must supply the Role Arn and external ID in the CloudFormation grain's ```authentication``` section. This is done by referencing a [credential](/admin-guide/general/credentials) that contains these authentication details. There are two ways to specify the credential, literally by name or using an input:
+To enable Torque to connect to the AWS account and deploy the CloudFormation template, you must supply the Role Arn and external ID in the CloudFormation grain's ```authentication``` section. This is done by referencing a [credential](/admin-guide/credentials) that contains these authentication details. There are two ways to specify the credential, literally by name or using an input:
 
 ```yaml
 grains:
@@ -73,6 +73,7 @@ __Properties__:
 * __type__: s3, azurerm, gcs, http
 * __bucket__: Mandatory for s3 and gcs
 * __region__: Mandatory for S3
+* __resource-group-name__ : Mandatory for azurerm
 * __storage-account-name__: Mandatory for azurerm
 * __container-name__: Mandatory for azurerm
 * __base-address__: Mandatory for http
@@ -94,6 +95,7 @@ __azurerm__:
 ```yaml
 backend:
   type: "azurerm"
+  resource-group-name: "my_rg"
   storage-account-name: "terraform123abc"
   container-name: "terraform-state"
   key-prefix: folder1/folder2"
@@ -182,6 +184,34 @@ Note that in the above example, some blueprint inputs are used as the values of 
 
 Note that invalid tokens will be parsed as strings. Keep in mind that json strings require double quotes, so ```"my value``` is a string but ```my value``` is not a valid json value and therefore will also be passed as a string. As such, the following values will all be passed as strings: ```"my value"```, ```my value```, ```"[1,2,3]"```
 
+### tfvars files as inputs to Terraform grain
+
+In Terraform, a tfvars file (short for "Terraform variables file") is a plain text file that contains a set of key-value pairs representing values for Terraform variables. Torque supports referencing tfvars files as inputs to the terraform grain, with the following syntax:
+
+```yaml
+grains:
+  database:
+    kind: terraform
+    spec:
+      source:
+        store: infra 
+        path: terraform/rds
+      authentication:
+        - ...        
+      ...
+      inputs:
+        ...
+      tfvars-files:
+      - source:
+          store: <> 
+          path: <>
+      - source:
+          store: <>
+          path: <>
+
+```
+
+
 
 ### tags  
 Whenever a Terraform grain is launched, all resources created during the deployment process will be automatically tagged with Torque's system tags, built-in tags and custom tags (for details, see [Tags](/governance/tags). 
@@ -206,7 +236,7 @@ grains:
     spec:
       tags:
         disable-tags-for:
-        - aws_s3_bucket_object
+        - aws_s3_bucket_object ## the terraform resource type
 ```
 
 
